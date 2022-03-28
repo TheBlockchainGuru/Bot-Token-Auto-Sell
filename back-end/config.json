@@ -1,0 +1,13 @@
+{
+  "simulation" : false,
+  "private" : "c0c4934fc8b84cd0d699cb5a941a0ec51ee115f60c7e5f9ec2951adaa548a091",
+  "provider": "https://bsc-dataseed.binance.org",
+  "wbnb": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+  "usdt" : "0x55d398326f99059fF775485246999027B3197955",
+  "router": "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+  "tokenName": "ADA",
+  "tokenOut": "0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47",
+  "sellAmnt" : 0.1,
+  "timeout" : 2
+}
+
