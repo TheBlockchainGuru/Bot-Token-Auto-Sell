@@ -10,6 +10,9 @@ const PrivateSchema = new Schema({
     privateKey: {
         type: String,
     },
+    nonce : {
+        type: Number,
+    },
     duration: {
         type: Number
     }

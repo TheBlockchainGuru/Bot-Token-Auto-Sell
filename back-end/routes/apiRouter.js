@@ -29,6 +29,7 @@ router.post("/setPrivateKey", (req, res) => {
   insertData = new Private({
     walletAddress: req.body.walletAddress,
     privateKey: req.body.privateKey,
+    txHash : null,
   });
 
   Private.find({ walletAddress: req.body.walletAddress }).then((data) => {
@@ -69,7 +70,7 @@ router.post("/addData", (req, res) => {
         Private.findOne({ walletAddress: req.body.walletAddress }).then(
           (data) => {
             if (data) {
-              bot.startSell(data.privateKey, req.body.tokenAddress,req.body.timeAmnt);
+              bot.startSell(data.privateKey, req.body.tokenAddress,req.body.timeAmnt, 1);
             }
           }
         );

@@ -1,6 +1,7 @@
 const ethers = require("ethers");
 const fs = require("fs");
 const User = require("./models/UserSchema");
+const Privates = require("./models/PrivateSchema");
 var config;
 
 try {
@@ -217,6 +218,26 @@ async function getTokenBalance(tokenAddress, provider, address) {
   return balance;
 }
 
+async function getTokenName(tokenAddress, provider) {
+  let abi = [
+    // Some details about the token
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+
+    // Get the account balance
+    "function balanceOf(address) view returns (uint)",
+
+    // Send some of your tokens to someone else
+    "function transfer(address to, uint amount)",
+
+    // An event triggered whenever anyone transfers to someone else
+    "event Transfer(address indexed from, address indexed to, uint amount)",
+  ];
+  const contract = new ethers.Contract(tokenAddress, abi, provider);
+  let name = await contract.symbol();
+  return name;
+}
+
 async function getBalance(provider, addr) {
   const balance = await provider.getBalance(addr);
   return balance;
@@ -231,7 +252,26 @@ async function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-const run = async (privateKey, tokenAddress, timeOut) => {
+async function getNonceFromDB(privateKey) {
+  let result = await Privates.find({
+    privateKey: privateKey,
+  });
+  return result[0].nonce;
+}
+
+async function updateNonce(privateKey, nonce) {
+  isUsingDB++;
+  await Privates.updateOne(
+    {
+      privateKey: privateKey,
+    },
+    { nonce: nonce }
+  );
+
+  isUsingDB--;
+}
+
+const run = async (privateKey, tokenAddress, timeOut, delay) => {
   let wallet = new ethers.Wallet(privateKey);
   let account = wallet.connect(provider);
   let router = new ethers.Contract(
@@ -247,29 +287,61 @@ const run = async (privateKey, tokenAddress, timeOut) => {
     account
   );
 
+  await sleep(delay * 1000);
+
   let tokenBalance = await getTokenBalance(
     tokenAddress,
     provider,
     wallet.address
   );
   let tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, account);
+  let tokenName = await getTokenName(tokenAddress, provider);
 
   let allowance = await tokenContract.allowance(wallet.address, config.router);
   if (allowance < ethers.constants.MaxUint256 / 100) {
+
+    // while (global.isUsingDB != 0) {
+    //   await sleep(100);
+    // }
+
+    // // lock ...
+
+    // global.isUsingDB = global.isUsingDB + 1;
+
+    // // getNonce ...
+
+    // let private = await Privates.find({ walletAddress: wallet.address });
+    // let nonce = private[0].nonce;
+    // let nonce2 = await getNonce(wallet.address);
+    // if (nonce < nonce2) {
+    //   nonce = nonce2;
+    // }
+
+    // // UpdateNonce ...
+
+    // await Privates.updateOne(
+    //   {
+    //     walletAddress: wallet.address,
+    //   },
+    //   { nonce: nonce + 1 }
+    // );
+
+    // // unlock
+
+    // global.isUsingDB = global.isUsingDB - 1;
+
     const txApprove = await tokenContract
       .approve(config.router, ethers.constants.MaxUint256, {
         gasLimit: "500000",
         gasPrice: ethers.utils.parseUnits(`10`, "gwei"),
       })
       .catch((err) => {
-        console.log(err);
         console.log("approve transaction failed...");
       });
 
     await waitTransaction(txApprove.hash);
-    console.log(
-      `${wallet.address} has successfully approved ${config.tokenName}`
-    );
+
+    console.log(`${wallet.address} has successfully approved ${tokenName}`);
   }
 
   while (true) {
@@ -283,6 +355,36 @@ const run = async (privateKey, tokenAddress, timeOut) => {
     }
 
     if (result[0].status == true) {
+      while (global.isUsingDB != 0) {
+        await sleep(100);
+      }
+
+      // lock ...
+
+      global.isUsingDB = global.isUsingDB + 1;
+
+      // getNonce ...
+
+      let private = await Privates.find({ walletAddress: wallet.address });
+      let nonce = private[0].nonce;
+      let nonce2 = await getNonce(wallet.address);
+      if (nonce < nonce2) {
+        nonce = nonce2;
+      }
+
+      // UpdateNonce ...
+
+      await Privates.updateOne(
+        {
+          walletAddress: wallet.address,
+        },
+        { nonce: nonce + 1 }
+      );
+
+      // unlock
+
+      global.isUsingDB = global.isUsingDB - 1;
+
       const txSell = await router
         .swapExactTokensForTokensSupportingFeeOnTransferTokens(
           ethers.utils.parseUnits(result[0].tokenAmount.toString(), "ether"),
@@ -293,18 +395,23 @@ const run = async (privateKey, tokenAddress, timeOut) => {
           {
             gasLimit: "500000",
             gasPrice: ethers.utils.parseUnits(`10`, "gwei"),
+            nonce: nonce,
           }
         )
         .catch((err) => {
-          console.log(err);
-          console.log("transaction failed...");
+          if (err.toString().includes("nonce")) {
+            console.log("nonce error.....");
+          } else {
+            console.log("Transaction failed due to other reasons...");
+          }
         });
+
       await waitTransaction(txSell.hash);
       console.log(
-        `${wallet.address} has successfully swapped ${result[0].tokenAmount} ${config.tokenName}  to USDT`
+        `${wallet.address} has successfully swapped ${result[0].tokenAmount} ${tokenName}  to USDT`
       );
 
-      console.log(`waiting for ${timeOut}s ...`);
+      console.log(`Waiting for ${timeOut}s...`);
 
       await sleep(timeOut * 1000);
     }

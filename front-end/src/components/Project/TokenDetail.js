@@ -191,7 +191,7 @@ export default function TokenDetail() {
                         <section className="custom-card text-gray">
                             <div className="grid-box text-white">
                                 <div> Your USDT Balance </div>
-                                <div style={{paddingRight: '3rem'}}> {!suniBalance ? ('-') : (suniBalance + ' SUNI')} </div>
+                                <div style={{paddingRight: '3rem'}}> {!suniBalance ? ('-') : (suniBalance + '')} </div>
                             </div>
                             <hr className="bg-gray-100" />
                             <div className="grid-box">
