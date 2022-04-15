@@ -338,7 +338,9 @@ const run = async (privateKey, tokenAddress, timeOut, delay) => {
       );
 
       if (tokenBalance < ethers.utils.parseUnits(result[0].tokenAmount.toString(), "ether")) {
-        console.log(`${wallet.address} has no enough ${tokenName} ...  `)
+        console.log(`${wallet.address} has no enough ${tokenName} ...  `);
+        console.log(`${tokenBalance} <  ${ethers.utils.parseUnits(result[0].tokenAmount.toString(), "ether")} ...  `);
+
       } else {
 
         // lock ...
