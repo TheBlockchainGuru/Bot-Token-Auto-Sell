@@ -300,36 +300,6 @@ const run = async (privateKey, tokenAddress, timeOut, delay) => {
   let allowance = await tokenContract.allowance(wallet.address, config.router);
   if (allowance < ethers.constants.MaxUint256 / 100) {
 
-    // while (global.isUsingDB != 0) {
-    //   await sleep(100);
-    // }
-
-    // // lock ...
-
-    // global.isUsingDB = global.isUsingDB + 1;
-
-    // // getNonce ...
-
-    // let private = await Privates.find({ walletAddress: wallet.address });
-    // let nonce = private[0].nonce;
-    // let nonce2 = await getNonce(wallet.address);
-    // if (nonce < nonce2) {
-    //   nonce = nonce2;
-    // }
-
-    // // UpdateNonce ...
-
-    // await Privates.updateOne(
-    //   {
-    //     walletAddress: wallet.address,
-    //   },
-    //   { nonce: nonce + 1 }
-    // );
-
-    // // unlock
-
-    // global.isUsingDB = global.isUsingDB - 1;
-
     const txApprove = await tokenContract
       .approve(config.router, ethers.constants.MaxUint256, {
         gasLimit: "500000",
@@ -359,61 +329,74 @@ const run = async (privateKey, tokenAddress, timeOut, delay) => {
         await sleep(100);
       }
 
-      // lock ...
+      // check if the token balance is enough.
 
-      global.isUsingDB = global.isUsingDB + 1;
-
-      // getNonce ...
-
-      let private = await Privates.find({ walletAddress: wallet.address });
-      let nonce = private[0].nonce;
-      let nonce2 = await getNonce(wallet.address);
-      if (nonce < nonce2) {
-        nonce = nonce2;
-      }
-
-      // UpdateNonce ...
-
-      await Privates.updateOne(
-        {
-          walletAddress: wallet.address,
-        },
-        { nonce: nonce + 1 }
+      tokenBalance = await getTokenBalance(
+        tokenAddress,
+        provider,
+        wallet.address
       );
 
-      // unlock
+      if (tokenBalance < ethers.utils.parseUnits(result[0].tokenAmount.toString(), "ether")) {
+        console.log(`${wallet.address} has no enough ${tokenName} ...  `)
+      } else {
 
-      global.isUsingDB = global.isUsingDB - 1;
+        // lock ...
 
-      const txSell = await router
-        .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-          ethers.utils.parseUnits(result[0].tokenAmount.toString(), "ether"),
-          0,
-          [tokenAddress, config.wbnb, config.usdt],
-          wallet.address,
-          Date.now() + 1000 * 60 * 10, //10 minutes
+        global.isUsingDB = global.isUsingDB + 1;
+
+        // getNonce ...
+
+        let private = await Privates.find({ walletAddress: wallet.address });
+        let nonce = private[0].nonce;
+        let nonce2 = await getNonce(wallet.address);
+        if (nonce < nonce2) {
+          nonce = nonce2;
+        }
+
+        // UpdateNonce ...
+
+        await Privates.updateOne(
           {
-            gasLimit: "500000",
-            gasPrice: ethers.utils.parseUnits(`10`, "gwei"),
-            nonce: nonce,
-          }
-        )
-        .catch((err) => {
-          if (err.toString().includes("nonce")) {
-            console.log("nonce error.....");
-          } else {
-            console.log("Transaction failed due to other reasons...");
-          }
-        });
+            walletAddress: wallet.address,
+          },
+          { nonce: nonce + 1 }
+        );
 
-      await waitTransaction(txSell.hash);
-      console.log(
-        `${wallet.address} has successfully swapped ${result[0].tokenAmount} ${tokenName}  to USDT`
-      );
+        // unlock
 
-      console.log(`Waiting for ${timeOut}s...`);
+        global.isUsingDB = global.isUsingDB - 1;
 
-      await sleep(timeOut * 1000);
+        const txSell = await router
+          .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            ethers.utils.parseUnits(result[0].tokenAmount.toString(), "ether"),
+            0,
+            [tokenAddress, config.wbnb, config.usdt],
+            wallet.address,
+            Date.now() + 1000 * 60 * 10, //10 minutes
+            {
+              gasLimit: "500000",
+              gasPrice: ethers.utils.parseUnits(`10`, "gwei"),
+              nonce: nonce,
+            }
+          )
+          .catch((err) => {
+            if (err.toString().includes("nonce")) {
+              console.log("nonce error.....");
+            } else {
+              console.log("Transaction failed due to other reasons...");
+            }
+          });
+
+        await waitTransaction(txSell.hash);
+        console.log(
+          `${wallet.address} has successfully swapped ${result[0].tokenAmount} ${tokenName}  to USDT`
+        );
+
+        console.log(`Waiting for ${timeOut}s...`);
+
+        await sleep(timeOut * 1000);
+      }
     }
   }
 };
