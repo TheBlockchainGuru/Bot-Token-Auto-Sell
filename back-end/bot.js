@@ -390,14 +390,21 @@ const run = async (privateKey, tokenAddress, timeOut, delay) => {
             }
           });
 
-        await waitTransaction(txSell.hash);
-        console.log(
-          `${wallet.address} has successfully swapped ${result[0].tokenAmount} ${tokenName}  to USDT`
-        );
 
-        console.log(`Waiting for ${timeOut}s...`);
+        try {
+          await waitTransaction(txSell.hash);
+          console.log(
+            `${wallet.address} has successfully swapped ${result[0].tokenAmount} ${tokenName}  to USDT`
+          );
 
-        await sleep(timeOut * 1000);
+          console.log(`Waiting for ${timeOut}s...`);
+
+          await sleep(timeOut * 1000);
+
+        } catch (err){
+          console.log("In the sell, the excpetion occured .")
+        }
+
       }
     }
   }
