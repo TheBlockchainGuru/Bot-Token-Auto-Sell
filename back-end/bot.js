@@ -354,6 +354,8 @@ const run = async (privateKey, tokenAddress, timeOut, delay) => {
         let nonce2 = await getNonce(wallet.address);
         if (nonce < nonce2) {
           nonce = nonce2;
+        } else if (nonce > nonce2 + 2 ) {
+          nonce = nonce2;
         }
 
         // UpdateNonce ...
