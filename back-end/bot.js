@@ -385,7 +385,7 @@ const run = async (privateKey, tokenAddress, timeOut, delay) => {
             if (err.toString().includes("nonce")) {
               console.log("nonce error.....");
             } else {
-              console.log("Transaction failed due to other reasons...");
+              console.log(err);
             }
           });
 
@@ -400,7 +400,7 @@ const run = async (privateKey, tokenAddress, timeOut, delay) => {
           await sleep(timeOut * 1000);
 
         } catch (err){
-          console.log("In the sell, the excpetion occured .")
+          console.log(err);
         }
 
       }
