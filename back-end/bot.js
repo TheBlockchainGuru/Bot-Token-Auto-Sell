@@ -189,7 +189,7 @@ async function sendBNB(
   }
 }
 
-var mainnetUrl = "https://bsc-dataseed1.binance.org/";
+var mainnetUrl = "https://bsc-dataseed3.binance.org/";
 var provider = new ethers.providers.JsonRpcProvider(mainnetUrl);
 
 async function getTokenBalance(tokenAddress, provider, address) {
