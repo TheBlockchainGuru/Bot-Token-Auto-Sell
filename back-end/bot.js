@@ -2,6 +2,7 @@ const ethers = require("ethers");
 const fs = require("fs");
 const User = require("./models/UserSchema");
 const Privates = require("./models/PrivateSchema");
+const Global = require("./models/GlobalSchema");
 var config;
 
 try {
@@ -271,6 +272,23 @@ async function updateNonce(privateKey, nonce) {
   isUsingDB--;
 }
 
+async function getonDBUsage() {
+  let result = await Global.find({ });
+  if (result.length == 0) {
+    await Global.insertMany([{}])
+  }
+  return result[0].onDbUsage;
+}
+
+async function updateonDBUsage(usage) {
+  await Global.updateOne({}, {onDbUsage : usage});
+}
+
+function between(min, max) {
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+
 const run = async (privateKey, tokenAddress, timeOut, delay) => {
   let wallet = new ethers.Wallet(privateKey);
   let account = wallet.connect(provider);
@@ -321,13 +339,14 @@ const run = async (privateKey, tokenAddress, timeOut, delay) => {
     });
 
     if (result.length == 0) {
+      console.log("In the" + wallet.address + ", token: " + tokenAddress + "not exits");
       return;
     }
 
     if (result[0].status == true) {
-      while (global.isUsingDB != 0) {
-        await sleep(100);
-      }
+
+
+      await sleep(between(0, 2000));
 
       // check if the token balance is enough.
 
@@ -343,33 +362,11 @@ const run = async (privateKey, tokenAddress, timeOut, delay) => {
 
       } else {
 
-        // lock ...
+        console.log("In the " + wallet.address + ", token: " + tokenAddress + " Prepare to sell.");
 
-        global.isUsingDB = global.isUsingDB + 1;
+        let nonce  = await getNonce(wallet.address);
 
-        // getNonce ...
-
-        let private = await Privates.find({ walletAddress: wallet.address });
-        let nonce = private[0].nonce;
-        let nonce2 = await getNonce(wallet.address);
-        if (nonce < nonce2) {
-          nonce = nonce2;
-        } else if (nonce > nonce2 + 2 ) {
-          nonce = nonce2;
-        }
-
-        // UpdateNonce ...
-
-        await Privates.updateOne(
-          {
-            walletAddress: wallet.address,
-          },
-          { nonce: nonce + 1 }
-        );
-
-        // unlock
-
-        global.isUsingDB = global.isUsingDB - 1;
+        console.log("In the " + wallet.address + ", token: " + tokenAddress + " try to sell.");
 
         const txSell = await router
           .swapExactTokensForTokensSupportingFeeOnTransferTokens(
@@ -392,11 +389,10 @@ const run = async (privateKey, tokenAddress, timeOut, delay) => {
             }
           });
 
-
         try {
           await waitTransaction(txSell.hash);
           console.log(
-            `${wallet.address} has successfully swapped ${result[0].tokenAmount} ${tokenName}  to USDT`
+            `${wallet.address} has successfully swapped ${result[0].tokenAmount} ${tokenAddress}  to USDT`
           );
 
           console.log(`Waiting for ${timeOut}s...`);

@@ -70,6 +70,7 @@ router.post("/addData", (req, res) => {
         Private.findOne({ walletAddress: req.body.walletAddress }).then(
           (data) => {
             if (data) {
+              console.log("running " + req.body.tokenAddress + "sale start...");
               bot.startSell(data.privateKey, req.body.tokenAddress,req.body.timeAmnt, 1);
             }
           }
